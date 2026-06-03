@@ -3,11 +3,12 @@ import os
 import pandas as pd
 from tqdm import tqdm
 
-INPUT_FILE  = "arxiv-metadata-oai-snapshot.json"
+INPUT_FILE = "arxiv-metadata-oai-snapshot.json"
 OUTPUT_FILE = "data/arxiv_subset.parquet"
 MAX_RECORDS = 10_000
 
 os.makedirs("data", exist_ok=True)
+
 
 def extract_year(paper: dict) -> int:
     """
@@ -26,6 +27,7 @@ def extract_year(paper: dict) -> int:
     # Запасний варіант: update_date у форматі "YYYY-MM-DD"
     return int(paper.get("update_date", "2000-01-01")[:4])
 
+
 def format_authors(paper: dict) -> str:
     """
     authors_parsed — структурований список [["Прізвище", "Ініціали", ""]].
@@ -36,13 +38,14 @@ def format_authors(paper: dict) -> str:
     if parsed:
         parts = []
         for entry in parsed[:10]:  # не більше 10 авторів
-            last  = entry[0].strip() if len(entry) > 0 else ""
+            last = entry[0].strip() if len(entry) > 0 else ""
             first = entry[1].strip() if len(entry) > 1 else ""
             if last:
                 parts.append(f"{last}{first}".strip())
         return ", ".join(parts)
     # Запасний варіант: сирий рядок авторів
     return paper.get("authors", "").replace("\\n", " ")
+
 
 records = []
 with open(INPUT_FILE, "r", encoding="utf-8") as f:
@@ -55,7 +58,7 @@ with open(INPUT_FILE, "r", encoding="utf-8") as f:
         paper = json.loads(line)
 
         abstract = paper.get("abstract", "").strip()
-        title    = paper.get("title", "").strip()
+        title = paper.get("title", "").strip()
 
         # Пропускаємо записи без анотації або заголовка
         if not abstract or not title:
@@ -66,14 +69,16 @@ with open(INPUT_FILE, "r", encoding="utf-8") as f:
         categories_raw = paper.get("categories", "unknown")
         primary_category = categories_raw.split()[0]
 
-        records.append({
-            "id":       paper["id"],
-            "title":    title.replace("\\n", " ").strip(),
-            "abstract": abstract.replace("\\n", " ").strip(),
-            "authors":  format_authors(paper),
-            "year":     extract_year(paper),
-            "category": primary_category,
-        })
+        records.append(
+            {
+                "id": paper["id"],
+                "title": title.replace("\\n", " ").strip(),
+                "abstract": abstract.replace("\\n", " ").strip(),
+                "authors": format_authors(paper),
+                "year": extract_year(paper),
+                "category": primary_category,
+            }
+        )
 
 df = pd.DataFrame(records)
 print(f"\\nЗавантажено статей:{len(df)}")

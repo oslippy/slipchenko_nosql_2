@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "pinecone-client>=6.0.0",
+    "pinecone>=6.0.0",
     "sentence-transformers>=3.0.0",
     "torch<2.3; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "transformers<4.45; sys_platform == 'darwin' and platform_machine == 'x86_64'",

@@ -5,7 +5,8 @@ from tqdm import tqdm
 
 INPUT_FILE = "arxiv-metadata-oai-snapshot.json"
 OUTPUT_FILE = "data/arxiv_subset.parquet"
-MAX_RECORDS = 10_000
+PER_YEAR = 370
+MIN_YEAR = 2000
 
 os.makedirs("data", exist_ok=True)
 
@@ -25,7 +26,11 @@ def extract_year(paper: dict) -> int:
     except (IndexError, ValueError, KeyError):
         pass
     # Запасний варіант: update_date у форматі "YYYY-MM-DD"
-    return int(paper.get("update_date", "2000-01-01")[:4])
+    ud = paper.get("update_date") or "2000-01-01"
+    try:
+        return int(ud[:4])
+    except (ValueError, TypeError):
+        return 0
 
 
 def format_authors(paper: dict) -> str:
@@ -47,11 +52,10 @@ def format_authors(paper: dict) -> str:
     return paper.get("authors", "").replace("\\n", " ")
 
 
+year_counts = {}
 records = []
 with open(INPUT_FILE, "r", encoding="utf-8") as f:
     for line in tqdm(f, desc="Читаємо датасет"):
-        if len(records) >= MAX_RECORDS:
-            break
         line = line.strip()
         if not line:
             continue
@@ -62,6 +66,12 @@ with open(INPUT_FILE, "r", encoding="utf-8") as f:
 
         # Пропускаємо записи без анотації або заголовка
         if not abstract or not title:
+            continue
+
+        # Беремо не більше PER_YEAR статей з кожного року (від MIN_YEAR),
+        # щоб датасет охоплював різні роки, а не лише початок файлу (2007)
+        year = extract_year(paper)
+        if year < MIN_YEAR or year_counts.get(year, 0) >= PER_YEAR:
             continue
 
         # categories може містити кілька категорій через пробіл: "cs.LG cs.AI"
@@ -75,17 +85,18 @@ with open(INPUT_FILE, "r", encoding="utf-8") as f:
                 "title": title.replace("\\n", " ").strip(),
                 "abstract": abstract.replace("\\n", " ").strip(),
                 "authors": format_authors(paper),
-                "year": extract_year(paper),
+                "year": year,
                 "category": primary_category,
             }
         )
+        year_counts[year] = year_counts.get(year, 0) + 1
 
 df = pd.DataFrame(records)
 print(f"\\nЗавантажено статей:{len(df)}")
 print(f"\\nРозподіл за категоріями (топ-10):")
 print(df["category"].value_counts().head(10))
 print(f"\\nРозподіл за роками:")
-print(df["year"].value_counts().sort_index().tail(10))
+print(df["year"].value_counts().sort_index())
 print(f"\\nПриклад запису:")
 print(df.iloc[0].to_dict())
 

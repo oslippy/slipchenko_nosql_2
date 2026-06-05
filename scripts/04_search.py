@@ -47,12 +47,12 @@ QUERY_RL = "reinforcement learning"
 qvec_rl = encode_query(QUERY_RL).tolist()
 
 print("\nкрок 4: пошук з фільтром, запит:", QUERY_RL)
-print("A) тільки cs.LG:")
+print("A) cs.LG, останні 5 років (рік >= 2021):")
 res_a = index.query(
     vector=qvec_rl,
     top_k=TOP_K,
     include_metadata=True,
-    filter={"category": {"$eq": "cs.LG"}},
+    filter={"category": {"$eq": "cs.LG"}, "year": {"$gte": 2021}},
 )
 show(res_a.matches)
 
